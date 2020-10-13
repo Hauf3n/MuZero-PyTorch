@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,6 +8,23 @@ import torch.nn.functional as F
 device = torch.device("cuda:0")
 dtype = torch.float
 
+class MinMaxStats():
+    
+    def __init__(self):
+        
+        self.max = - np.inf
+        self.min = np.inf
+        
+    def update(self, value):
+        self.max = np.maximum(self.max, value.cpu())
+        self.min = np.minimum(self.min, value.cpu())
+        
+    def normalize(self, value):
+        value = value.cpu()
+        if self.max > self.min:
+            return ((value - self.min) / (self.max - self.min)).to(device)
+        
+        return value
 
 class MCTS_Node():
 
@@ -32,7 +50,7 @@ class MCTS_Node():
 
 class MCTS():
     
-    def __init__(self, num_actions, dynamics_model, prediction_model, c1=1.25, c2=19652, gamma=0.95):
+    def __init__(self, num_actions, dynamics_model, prediction_model, agent, c1=1.25, c2=19652, gamma=0.95):
         super().__init__()
         
         self.num_actions = num_actions
@@ -42,6 +60,7 @@ class MCTS():
         
         self.dynamics_model = dynamics_model
         self.prediction_model = prediction_model
+        self.agent = agent
         
     def run(self, num_simulations, root_state):
         
@@ -50,6 +69,8 @@ class MCTS():
         p, v = p.detach(), v.detach()
         self.root = self.init_root(root_state, p)
         
+        self.min_max_stats = MinMaxStats()
+          
         # run simulations and save trajectory
         for i in range(num_simulations):
             
@@ -73,16 +94,9 @@ class MCTS():
         return self.get_pi(), self.root.search_value()
      
     def expand(self, parent, node, action):
-    
-        # working?
-        onehot = F.one_hot(torch.tensor(action).to(device),num_classes=self.num_actions).reshape(1,self.num_actions).to(dtype)
-        in_dynamics = torch.cat([parent.state,onehot],dim=1)
         
-        next_state, reward = self.dynamics_model(in_dynamics)
-        next_state, reward = next_state.detach(), reward.detach()   
-        
-        p, v = self.prediction_model(next_state)
-        p, v = p.detach(), v.detach()
+        next_state, p, v, reward = self.agent.rollout_step(parent.state, [action])
+        next_state, p, v, reward = next_state.detach(), p.detach(), v.detach(), reward.detach()
         
         node.state = next_state
         node.reward = reward
@@ -98,6 +112,8 @@ class MCTS():
         
             node.value_sum += value
             node.visits += 1
+            
+            self.min_max_stats.update(node.search_value())
             
             value = node.reward + self.gamma * value         
             
@@ -120,12 +136,12 @@ class MCTS():
         
     def ucb_score(self, parent, child):
         
-        pb_c = np.log((parent.visits + self.c2 + 1) / self.c2) + self.c1
-        pb_c *= np.sqrt(parent.visits) / (child.visits + 1)
+        pb_c = math.log((parent.visits + self.c2 + 1) / self.c2) + self.c1
+        pb_c *= math.sqrt(parent.visits) / (child.visits + 1)
 
         prior_score = pb_c * child.p
         if child.visits > 0:
-            value_score = child.reward + self.gamma * child.search_value()
+            value_score = child.reward + self.gamma * self.min_max_stats.normalize(child.search_value())
         else:
             value_score = 0
         return prior_score + value_score
@@ -151,6 +167,3 @@ class MCTS():
             node.edges[i] = MCTS_Node(p[0,i])
     
         return node
-        
-    def expand_node(self, node):
-        pass

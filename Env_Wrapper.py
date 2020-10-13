@@ -28,7 +28,7 @@ class Env_Wrapper(gym.Wrapper):
     def compute_observation(self):
         
         features = np.zeros((self.history_length, self.num_obs_space))
-        actions = np.zeros((self.history_length, self.num_actions)) #  will become one hot
+        actions = np.zeros((self.history_length, 1)) #  encoding: action_index/num_actions
         
         # features 
         current_feature_len = len(self.obs_history)
@@ -41,16 +41,12 @@ class Env_Wrapper(gym.Wrapper):
         current_action_len = len(self.action_history)
         if current_action_len == self.history_length:
         
-            actions[np.arange(current_action_len),self.action_history] = 1
+            actions = np.array(self.action_history)/self.num_actions
             
         else:
             if len(self.action_history) != 0:
-                action_oh = np.zeros((current_action_len, self.num_actions))
-                action_oh[np.arange(current_action_len),self.action_history] = 1
-                actions[self.history_length-current_action_len::] = action_oh
-      
-        #print(np.concatenate((features, actions), axis=1))
-        #print(np.concatenate((features, actions), axis=1).flatten().reshape(1,-1))      
+                actions[self.history_length-current_action_len::] = np.array(self.action_history)/self.num_actions
+        
         return np.concatenate((features, actions), axis=1).flatten().reshape(1,-1)
     
     
@@ -79,4 +75,4 @@ class Env_Wrapper(gym.Wrapper):
             self.action_history = self.action_history[1::]
             
         self.obs_history.append(obs)
-        self.action_history.append(action)
+        self.action_history.append([action])

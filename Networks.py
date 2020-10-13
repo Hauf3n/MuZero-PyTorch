@@ -12,15 +12,15 @@ class Representation_Model(nn.Module):
         self.num_hidden = num_hidden
         
         network = [
-            nn.Linear(num_in, 32),
+            nn.Linear(num_in, 50),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(50, 50),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(50, 50),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(50, 50),
             nn.ReLU(),
-            nn.Linear(32, num_hidden)
+            nn.Linear(50, num_hidden)
         ]
         
         self.network = nn.Sequential(*network)
@@ -38,15 +38,15 @@ class Dynamics_Model(nn.Module):
         self.num_actions = num_actions
        
         network = [
-            nn.Linear(num_hidden + num_actions, 32),
+            nn.Linear(num_hidden + 1, 50), # hidden, action encoding
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(50, 50),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(50, 50),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(50, 50),
             nn.ReLU(),
-            nn.Linear(32, num_hidden + 1) # add reward prediction
+            nn.Linear(50, num_hidden + 1) # add reward prediction
         ]
         
         self.network = nn.Sequential(*network)
@@ -66,13 +66,13 @@ class Prediction_Model(nn.Module):
         self.num_hidden = num_hidden
         
         network = [
-            nn.Linear(num_hidden, 32),
+            nn.Linear(num_hidden, 50),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(50, 50),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(50, 50),
             nn.ReLU(),
-            nn.Linear(32, num_actions + 1) # value & policy prediction
+            nn.Linear(50, num_actions + 1) # value & policy prediction
         ]
         
         self.network = nn.Sequential(*network)

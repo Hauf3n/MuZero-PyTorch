@@ -21,28 +21,35 @@ class MuZero_Agent(nn.Module):
         self.num_actions = num_actions
         self.num_simulations = num_simulations
         
-        self.mcts = MCTS(num_actions, dynamics_model, prediction_model)
+        self.mcts = MCTS(num_actions, dynamics_model, prediction_model, self)
         
-    def forward(self, x): # inference with MCTS
+    def forward(self, obs): # inference with MCTS
     
-        start_state = self.representation_model(x)
+        start_state = self.representation_model(obs)
         pi, v = self.mcts.run(self.num_simulations, start_state)
         
         action = np.random.choice(self.num_actions, 1, p=pi)
+        #action = np.random.choice(self.num_actions, 1)
+        #return 0, pi, v
+        
         return action[0], pi, v
         
+    def inital_step(self, obs):
+    # first step of rollout for optimization
+    
+        state = self.representation_model(obs)
+        p, v = self.prediction_model(state)
+        
+        return state, p, v
+        
+        
     def rollout_step(self, state, action): 
-    # unroll a step for optimization data
+    # unroll a step
     
         batch_size = state.shape[0]
         
-        rewards = torch.zeros((batch_size, 1)).to(device).to(dtype)
-        pis = torch.zeros((batch_size, 1, self.num_actions)).to(device).to(dtype)
-        vs = torch.zeros((batch_size, 1)).to(device).to(dtype)
-        
-        onehot = F.one_hot(torch.tensor(action).to(device),num_classes=self.num_actions).to(dtype)
-        
-        in_dynamics = torch.cat([state,onehot],dim=1)
+        action_encoding = torch.tensor(action).to(device).to(dtype).reshape(batch_size,1) / self.num_actions
+        in_dynamics = torch.cat([state,action_encoding],dim=1)
         
         next_state, reward = self.dynamics_model(in_dynamics)
         p, v = self.prediction_model(next_state)

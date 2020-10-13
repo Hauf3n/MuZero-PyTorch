@@ -21,11 +21,10 @@ class Logger:
         
 class Env_Runner:
     
-    def __init__(self, env, agent):
+    def __init__(self, env):
         super().__init__()
         
         self.env = env
-        self.agent = agent
         self.num_actions = self.env.action_space.n
         
         self.logger = Logger("episode_returns")
@@ -34,7 +33,7 @@ class Env_Runner:
         self.ob = self.env.reset()
         self.total_eps = 0
         
-    def run(self):
+    def run(self, agent):
         
         self.obs = []
         self.actions = []
@@ -49,7 +48,7 @@ class Env_Runner:
         done = False
         while not done:
             
-            action, pi, v = self.agent(torch.tensor(self.ob).to(device).to(dtype))
+            action, pi, v = agent(torch.tensor(self.ob).to(device).to(dtype))
             
             self.ob, r, done, info = self.env.step(action)
             
@@ -60,17 +59,11 @@ class Env_Runner:
             self.rewards.append(torch.tensor(r))
             self.dones.append(done)
             
-            if done: # real environment reset
+            if done: # environment reset
                 if "return" in info:
                     self.logger.log(f'{self.total_eps},{info["return"]}')
             
             #self.env.render()
-        
-        #action, pi, v = self.agent(torch.tensor(self.ob).to(device).to(dtype))
-        #self.actions.append(action)
-        #self.pis.append(torch.tensor(np.repeat(1,self.num_actions)/self.num_actions))
-        #self.rewards.append(0)
-        #self.vs.append(v)
         
         self.total_eps += 1
                                     

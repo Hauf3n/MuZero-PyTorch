@@ -20,20 +20,22 @@ dtype = torch.float
 
 def train():
     
-    history_length = 2
-    num_hidden = 32
+    history_length = 4
+    num_hidden = 50
     num_simulations = 8
     replay_capacity = 100
-    batch_size = 16
-    k = 3
-    n = 10
-    lr = 1e-3
+    batch_size = 32
+    k = 4
+    n = 3
+    lr = 1e-2
     
-    raw_env = gym.make('CartPole-v0')
+    #target_update = 15
+    
     #raw_env = gym.make('LunarLander-v2')
+    raw_env = gym.make('CartPole-v0')
     num_obs_space = raw_env.observation_space.shape[0]
     num_actions = raw_env.action_space.n
-    num_in = history_length * (num_obs_space + num_actions)
+    num_in = history_length * (num_obs_space + 1) # history * ( obs + actions encoding)
     
     env = Env_Wrapper(raw_env, history_length)
     
@@ -42,8 +44,10 @@ def train():
     prediction_model = Prediction_Model(num_hidden, num_actions).to(device)
     
     agent = MuZero_Agent(num_simulations, num_actions, representation_model, dynamics_model, prediction_model).to(device)
+    #target_agent = MuZero_Agent(num_simulations, num_actions, representation_model, dynamics_model, prediction_model).to(device)
+    #target_agent.load_state_dict(agent.state_dict())
 
-    runner = Env_Runner(env, agent)
+    runner = Env_Runner(env)
     replay = Experience_Replay(replay_capacity, num_actions)
     
     mse_loss = nn.MSELoss()
@@ -51,10 +55,10 @@ def train():
     
     optimizer = optim.Adam(agent.parameters(), lr=lr)
     
-    for episode in range(1000):#while True:
+    for episode in range(2000):#while True:
         
         # act and get data
-        trajectory = runner.run()
+        trajectory = runner.run(agent)
         # save new data
         replay.insert([trajectory])
         
@@ -62,7 +66,10 @@ def train():
         # do update #
         #############
         
-        if len(replay) < 1:#if episode < 10:
+        #if episode%target_update == 0:
+            #target_agent.load_state_dict(agent.state_dict()) 
+        
+        if len(replay) < 5:
             continue
         
         optimizer.zero_grad()
@@ -79,41 +86,37 @@ def train():
         policy_target = torch.stack([torch.stack(data[i]["pi"]) for i in range(batch_size)]).to(device).to(dtype)
         value_target = torch.stack([torch.tensor(data[i]["return"]) for i in range(batch_size)]).to(device).to(dtype)
         
-        #print("representaion:",representation_in.shape)
-        #print("action:",actions.shape)
-        #print("rewards_t:",rewards_target.shape)
-        #print("policy_t:",policy_target.shape)
-        #print("value_t:",value_target.shape)
+        # loss
+        print("--------------------------------------")
         
-        # agent unroll
         loss = torch.tensor(0).to(device).to(dtype)
         
-        state = agent.representation_model(representation_in)
+        # agent inital step
         
-        print("--------------------------------------")
-        for step in range(k):
-            #loss = torch.tensor(0).to(device).to(dtype)
-            #print(step)
+        state, p, v = agent.inital_step(representation_in)
+        
+        policy_loss = mse_loss(p, policy_target[:,0].detach())
+        value_loss = mse_loss(v, value_target[:,0].detach())
+        loss += policy_loss + value_loss
+
+        # steps
+        for step in range(1, k+1):
+        
             # step
-            step_action = actions[:,step]
+            step_action = actions[:,step - 1]
             state, p, v, rewards = agent.rollout_step(state, step_action)
             
-            # step loss
-            print(policy_target[0,step])
-            print(p[0])
             policy_loss = mse_loss(p, policy_target[:,step].detach())
             value_loss = mse_loss(v, value_target[:,step].detach())
-            reward_loss = mse_loss(rewards, rewards_target[:,step].detach())
+            reward_loss = mse_loss(rewards, rewards_target[:,step-1].detach())
             
             print(f'policy: {policy_loss} || value: {value_loss} || reward: {reward_loss}')
-            #print(f'target: {value_target[:,step][0]}, pred: {v[0]}')
             loss += policy_loss + value_loss + reward_loss
             
         loss.backward()
-        optimizer.step()
+        optimizer.step() 
         
-        
-        
+        # clear replay, no reanalyse
         replay = Experience_Replay(replay_capacity, num_actions)
 
 if __name__ == "__main__":
