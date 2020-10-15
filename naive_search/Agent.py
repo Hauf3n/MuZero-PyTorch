@@ -11,7 +11,7 @@ dtype = torch.float
 
 class MuZero_Agent(nn.Module):
     
-    def __init__(self, num_simulations, num_actions, representation_model, dynamics_model, prediction_model, eps=0.5):
+    def __init__(self, num_actions, representation_model, dynamics_model, prediction_model, eps=0.5):
         super().__init__()
         
         self.representation_model = representation_model
@@ -19,7 +19,6 @@ class MuZero_Agent(nn.Module):
         self.prediction_model = prediction_model
         
         self.num_actions = num_actions
-        self.num_simulations = num_simulations
   
         self.eps = eps
         
@@ -29,13 +28,17 @@ class MuZero_Agent(nn.Module):
     def naive_search_inference(self, obs): # inference with naive_search
     
         start_state = self.representation_model(obs)
-        
+        action, v = naive_search(self, start_state, self.num_actions)
         # use epsilon greedy policy instead of everytime taking max action
         greedy = torch.rand(1)
         if self.eps > greedy: # random
-            return np.random.choice(self.num_actions, 1)[0]
+            return np.random.choice(self.num_actions, 1)[0], v
         else: # max
-            return naive_search(self, start_state, self.num_actions)
+            return action, v
+            
+        #pi = naive_search(self, start_state, self.num_actions)
+        #action = np.random.choice(self.num_actions, 1, p=pi)
+        #return action[0]
         
     def inital_step(self, obs):
     # first step of rollout for optimization

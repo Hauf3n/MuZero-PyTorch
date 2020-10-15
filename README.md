@@ -1,9 +1,8 @@
 # MuZero PyTorch
- Implementation of MuZero | CartPole <br><br><br>
+ Implementation of MuZero | CartPole <br><br>
  Work in progress ...<br><br> 
  
- current issue: mcts seems to make problems ... <br>
- Naive search very unstable, falls back all the time
- but reached 6 times 200 after 1800 eps and then falls back to ~11<br>
- maybe better experience replay
+ Current issue: mcts seems to make problems ... <br><br>
+ MuZero + naive-search (instead of MCTS) is now working (finally). <br> A bit unstable, but still good. Maybe do some stability improvements.
+
  

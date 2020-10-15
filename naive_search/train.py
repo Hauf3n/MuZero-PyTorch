@@ -20,25 +20,24 @@ dtype = torch.float
 
 def train():
     
-    history_length = 1
+    history_length = 2
     num_hidden = 50
-    num_simulations = 2
-    replay_capacity = 100
+    replay_capacity = 250
     batch_size = 32
     k = 3
-    n = 3
-    lr = 1e-4
+    n = 6
+    lr = 1e-3
     
     start_eps = 1
-    final_eps = 0.25
-    final_episode = 400
+    final_eps = 0.3
+    final_episode = 1000
     eps_interval = start_eps-final_eps
     
     #raw_env = gym.make('LunarLander-v2')
     raw_env = gym.make('CartPole-v0')
     num_obs_space = raw_env.observation_space.shape[0]
     num_actions = raw_env.action_space.n
-    num_in = history_length * (num_obs_space + 1) # history * ( obs + actions encoding)
+    num_in = history_length * num_obs_space # history * ( obs )
     
     env = Env_Wrapper(raw_env, history_length)
     
@@ -46,7 +45,7 @@ def train():
     dynamics_model = Dynamics_Model(num_hidden, num_actions).to(device)
     prediction_model = Prediction_Model(num_hidden, num_actions).to(device)
     
-    agent = MuZero_Agent(num_simulations, num_actions, representation_model, dynamics_model, prediction_model).to(device)
+    agent = MuZero_Agent(num_actions, representation_model, dynamics_model, prediction_model).to(device)
 
     runner = Env_Runner(env)
     replay = Experience_Replay(replay_capacity, num_actions)
@@ -56,23 +55,28 @@ def train():
     
     optimizer = optim.Adam(agent.parameters(), lr=lr)
     
+    agent.eps = 0
+    
     for episode in range(2000):#while True:
         
         agent.eps = np.maximum(final_eps, start_eps - ( eps_interval * episode/final_episode))
         
         # act and get data
         trajectory = runner.run(agent)
+        
         # save new data
+        
+        #if trajectory["length"] >= 30:
         replay.insert([trajectory])
         
         #############
         # do update #
         #############
         
-        if len(replay) < replay_capacity:
+        if len(replay) < 30:
             continue
             
-        for update in range(4):
+        for update in range(5):
             optimizer.zero_grad()
             
             # get data
@@ -87,7 +91,7 @@ def train():
             rewards_target = torch.stack([torch.tensor(data[i]["rewards"]) for i in range(batch_size)]).to(device).to(dtype)
             
             # loss
-            print("--------------------------------------")
+            #print("--------------------------------------")
             
             loss = torch.tensor(0).to(device).to(dtype)
             
@@ -108,8 +112,8 @@ def train():
                 value_loss = mse_loss(v, value_target[:,step].detach())
                 reward_loss = mse_loss(rewards, rewards_target[:,step-1].detach())
                 
-                print(f'value: {value_loss} || reward: {reward_loss}')
-                loss += value_loss + reward_loss
+                #print(f'value: {value_loss} || reward: {reward_loss}')
+                loss += (value_loss + reward_loss)/k+1
                 
             loss.backward()
             optimizer.step() 

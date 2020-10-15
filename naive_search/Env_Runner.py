@@ -40,6 +40,7 @@ class Env_Runner:
         self.actions = []
         self.rewards = []
         self.dones = []
+        self.vs = []
         
         self.ob = self.env.reset()
         self.obs.append(torch.tensor(self.ob))
@@ -47,7 +48,7 @@ class Env_Runner:
         done = False
         while not done:
             
-            action = agent.naive_search_inference(torch.tensor(self.ob).to(device).to(dtype))
+            action, v = agent.naive_search_inference(torch.tensor(self.ob).to(device).to(dtype))
             
             self.ob, r, done, info = self.env.step(action)
             
@@ -55,10 +56,12 @@ class Env_Runner:
             self.actions.append(action)
             self.rewards.append(torch.tensor(r))
             self.dones.append(done)
+            self.vs.append(v)
             
             if done: # environment reset
                 if "return" in info:
                     self.logger.log(f'{self.total_eps},{info["return"]}')
+                    print("Return:",info["return"])
             
             #self.env.render()
         
@@ -74,6 +77,7 @@ class Env_Runner:
         traj["actions"] = self.actions
         traj["rewards"] = self.rewards
         traj["dones"] = self.dones
+        traj["vs"] = self.vs
         traj["length"] = len(self.obs)
         return traj
         
