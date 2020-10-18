@@ -20,20 +20,19 @@ dtype = torch.float
 
 def train():
     
-    history_length = 2
+    history_length = 3
     num_hidden = 50
-    replay_capacity = 250
+    replay_capacity = 30
     batch_size = 32
     k = 3
-    n = 6
-    lr = 1e-3
+    n = 3
+    lr = 5e-3
     
     start_eps = 1
-    final_eps = 0.3
-    final_episode = 1000
+    final_eps = 0.1
+    final_episode = 400
     eps_interval = start_eps-final_eps
     
-    #raw_env = gym.make('LunarLander-v2')
     raw_env = gym.make('CartPole-v0')
     num_obs_space = raw_env.observation_space.shape[0]
     num_actions = raw_env.action_space.n
@@ -51,12 +50,9 @@ def train():
     replay = Experience_Replay(replay_capacity, num_actions)
     
     mse_loss = nn.MSELoss()
-    cross_entropy_loss = nn.CrossEntropyLoss()
     
     optimizer = optim.Adam(agent.parameters(), lr=lr)
-    
-    agent.eps = 0
-    
+ 
     for episode in range(2000):#while True:
         
         agent.eps = np.maximum(final_eps, start_eps - ( eps_interval * episode/final_episode))
@@ -65,18 +61,16 @@ def train():
         trajectory = runner.run(agent)
         
         # save new data
-        
-        #if trajectory["length"] >= 30:
         replay.insert([trajectory])
         
         #############
         # do update #
         #############
         
-        if len(replay) < 30:
+        if len(replay) < 15:
             continue
             
-        for update in range(5):
+        for update in range(8):
             optimizer.zero_grad()
             
             # get data
@@ -91,7 +85,6 @@ def train():
             rewards_target = torch.stack([torch.tensor(data[i]["rewards"]) for i in range(batch_size)]).to(device).to(dtype)
             
             # loss
-            #print("--------------------------------------")
             
             loss = torch.tensor(0).to(device).to(dtype)
             

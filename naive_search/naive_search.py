@@ -34,8 +34,6 @@ def naive_search(agent, state, num_actions, n=3):
         state, _, v, _ = agent.rollout_step(state, actions)
         state, v = state.detach(), v.detach()
         
-    #print(v.cpu().numpy())
-    
     ##
     ## 1 - max selection
     ## kind of works with some epsilon greedy approach

@@ -29,6 +29,7 @@ class MuZero_Agent(nn.Module):
     
         start_state = self.representation_model(obs)
         action, v = naive_search(self, start_state, self.num_actions)
+        
         # use epsilon greedy policy instead of everytime taking max action
         greedy = torch.rand(1)
         if self.eps > greedy: # random
