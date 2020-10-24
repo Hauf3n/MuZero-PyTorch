@@ -54,13 +54,13 @@ class Experience_Replay():
             if n_index >= traj_last_index: # end of episode
                 v_n = torch.tensor([0]).to(device).to(dtype)
             else:
-                v_n = torch.tensor([0]).to(device).to(dtype)#v_n = self.memory[memory_index]["vs"][n_index] * (gamma ** n) # discount v_n
+                v_n = self.memory[memory_index]["vs"][n_index] * (gamma ** n) # discount v_n
             
             value = v_n
             # add discounted rewards until step n or end of episode
             last_valid_index = np.minimum(traj_last_index, n_index)
-            #for i, reward in enumerate(self.memory[memory_index]["rewards"][step:last_valid_index]):
-            for i, reward in enumerate(self.memory[memory_index]["rewards"][step::]): # rewards until end of episode
+            for i, reward in enumerate(self.memory[memory_index]["rewards"][step:last_valid_index]):
+            #for i, reward in enumerate(self.memory[memory_index]["rewards"][step::]): # rewards until end of episode
                 value += reward * (gamma ** i)
                 
             sample["return"].append(value)

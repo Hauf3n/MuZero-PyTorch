@@ -144,6 +144,8 @@ class MCTS():
             value_score = child.reward + self.gamma * self.min_max_stats.normalize(child.search_value())
         else:
             value_score = 0
+            
+        #print(f'p:{prior_score} - v:{value_score}')
         return prior_score + value_score
 
             

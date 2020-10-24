@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
+
 device = torch.device("cuda:0")
 dtype = torch.float
 
@@ -48,7 +49,7 @@ class Env_Runner:
         done = False
         while not done:
             
-            action, pi, v = agent(torch.tensor(self.ob).to(device).to(dtype))
+            action, pi, v = agent.mcts_inference(torch.tensor(self.ob).to(device).to(dtype))
             
             self.ob, r, done, info = self.env.step(action)
             

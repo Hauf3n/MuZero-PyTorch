@@ -5,6 +5,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from Networks import Representation_Model, Dynamics_Model, Prediction_Model
 from MCTS import MCTS
+from naive_search import naive_search
 
 device = torch.device("cuda:0")
 dtype = torch.float
@@ -23,7 +24,10 @@ class MuZero_Agent(nn.Module):
         
         self.mcts = MCTS(num_actions, dynamics_model, prediction_model, self)
         
-    def forward(self, obs): # inference with MCTS
+    def forward(self, obs):
+        pass
+        
+    def mcts_inference(self, obs): # inference with MCTS
     
         start_state = self.representation_model(obs)
         pi, v = self.mcts.run(self.num_simulations, start_state)
@@ -33,7 +37,7 @@ class MuZero_Agent(nn.Module):
         #return 0, pi, v
         
         return action[0], pi, v
-        
+  
     def inital_step(self, obs):
     # first step of rollout for optimization
     

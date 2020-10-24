@@ -20,14 +20,14 @@ dtype = torch.float
 
 def train():
     
-    history_length = 4
+    history_length = 3
     num_hidden = 50
-    num_simulations = 8
+    num_simulations = 16
     replay_capacity = 100
     batch_size = 32
-    k = 4
-    n = 3
-    lr = 1e-2
+    k = 5
+    n = 5
+    lr = 1e-3
     
     #target_update = 15
     
@@ -35,7 +35,7 @@ def train():
     raw_env = gym.make('CartPole-v0')
     num_obs_space = raw_env.observation_space.shape[0]
     num_actions = raw_env.action_space.n
-    num_in = history_length * (num_obs_space + 1) # history * ( obs + actions encoding)
+    num_in = history_length * num_obs_space # history * (obs)
     
     env = Env_Wrapper(raw_env, history_length)
     
@@ -69,55 +69,56 @@ def train():
         #if episode%target_update == 0:
             #target_agent.load_state_dict(agent.state_dict()) 
         
-        if len(replay) < 5:
+        if len(replay) < 20:
             continue
-        
-        optimizer.zero_grad()
-        
-        # get data
-        data = replay.get(batch_size,k,n)
-        
-        # network unroll data
-        representation_in = torch.stack([torch.flatten(data[i]["obs"]) for i in range(batch_size)]).to(device).to(dtype) # flatten when insert into mem
-        actions = np.stack([np.array(data[i]["actions"], dtype=np.int64) for i in range(batch_size)])
-        
-        # targets
-        rewards_target = torch.stack([torch.tensor(data[i]["rewards"]) for i in range(batch_size)]).to(device).to(dtype)
-        policy_target = torch.stack([torch.stack(data[i]["pi"]) for i in range(batch_size)]).to(device).to(dtype)
-        value_target = torch.stack([torch.tensor(data[i]["return"]) for i in range(batch_size)]).to(device).to(dtype)
-        
-        # loss
-        print("--------------------------------------")
-        
-        loss = torch.tensor(0).to(device).to(dtype)
-        
-        # agent inital step
-        
-        state, p, v = agent.inital_step(representation_in)
-        
-        policy_loss = mse_loss(p, policy_target[:,0].detach())
-        value_loss = mse_loss(v, value_target[:,0].detach())
-        loss += policy_loss + value_loss
+            
+        for i in range(6):
+            optimizer.zero_grad()
+            
+            # get data
+            data = replay.get(batch_size,k,n)
+            
+            # network unroll data
+            representation_in = torch.stack([torch.flatten(data[i]["obs"]) for i in range(batch_size)]).to(device).to(dtype) # flatten when insert into mem
+            actions = np.stack([np.array(data[i]["actions"], dtype=np.int64) for i in range(batch_size)])
+            
+            # targets
+            rewards_target = torch.stack([torch.tensor(data[i]["rewards"]) for i in range(batch_size)]).to(device).to(dtype)
+            policy_target = torch.stack([torch.stack(data[i]["pi"]) for i in range(batch_size)]).to(device).to(dtype)
+            value_target = torch.stack([torch.tensor(data[i]["return"]) for i in range(batch_size)]).to(device).to(dtype)
+            
+            # loss
+            #print("--------------------------------------")
+            
+            loss = torch.tensor(0).to(device).to(dtype)
+            
+            # agent inital step
+            
+            state, p, v = agent.inital_step(representation_in)
+            
+            policy_loss = mse_loss(p, policy_target[:,0].detach())
+            value_loss = mse_loss(v, value_target[:,0].detach())
+            loss += policy_loss + value_loss
 
-        # steps
-        for step in range(1, k+1):
-        
-            # step
-            step_action = actions[:,step - 1]
-            state, p, v, rewards = agent.rollout_step(state, step_action)
+            # steps
+            for step in range(1, k+1):
             
-            policy_loss = mse_loss(p, policy_target[:,step].detach())
-            value_loss = mse_loss(v, value_target[:,step].detach())
-            reward_loss = mse_loss(rewards, rewards_target[:,step-1].detach())
-            
-            print(f'policy: {policy_loss} || value: {value_loss} || reward: {reward_loss}')
-            loss += policy_loss + value_loss + reward_loss
-            
-        loss.backward()
-        optimizer.step() 
+                # step
+                step_action = actions[:,step - 1]
+                state, p, v, rewards = agent.rollout_step(state, step_action)
+                
+                policy_loss = mse_loss(p, policy_target[:,step].detach())
+                value_loss = mse_loss(v, value_target[:,step].detach())
+                reward_loss = mse_loss(rewards, rewards_target[:,step-1].detach())
+                
+                #print(f'policy: {policy_loss} || value: {value_loss} || reward: {reward_loss}')
+                loss += (policy_loss + value_loss + reward_loss) / (k+1)
+         
+            loss.backward()
+            optimizer.step() 
         
         # clear replay, no reanalyse
-        replay = Experience_Replay(replay_capacity, num_actions)
+        #replay = Experience_Replay(replay_capacity, num_actions)
 
 if __name__ == "__main__":
 
