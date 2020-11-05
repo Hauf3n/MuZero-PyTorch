@@ -84,5 +84,5 @@ class Prediction_Model(nn.Module):
         
         # softmax probs
         p = F.softmax(p, dim=1)
-        
+        #print(p,v)
         return p, v         

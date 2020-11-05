@@ -35,7 +35,7 @@ class MuZero_Agent(nn.Module):
         action = np.random.choice(self.num_actions, 1, p=pi)
         #action = np.random.choice(self.num_actions, 1)
         #return 0, pi, v
-        
+        print(pi)
         return action[0], pi, v
   
     def inital_step(self, obs):

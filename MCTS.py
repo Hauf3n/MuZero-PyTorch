@@ -50,13 +50,16 @@ class MCTS_Node():
 
 class MCTS():
     
-    def __init__(self, num_actions, dynamics_model, prediction_model, agent, c1=1.25, c2=19652, gamma=0.95):
+    def __init__(self, num_actions, dynamics_model, prediction_model, agent, c1=1.25, c2=19652, gamma=0.99):
         super().__init__()
         
         self.num_actions = num_actions
         self.c1 = c1
         self.c2 = c2
         self.gamma = gamma
+        self.root_dirichlet_alpha = 0.25
+        self.root_exploration_fraction = 0.25
+        self.temperature = 1
         
         self.dynamics_model = dynamics_model
         self.prediction_model = prediction_model
@@ -66,7 +69,7 @@ class MCTS():
         
         # init root
         p, v = self.prediction_model(root_state)
-        p, v = p.detach(), v.detach()
+        p, rv = p.detach(), v.detach()
         self.root = self.init_root(root_state, p)
         
         self.min_max_stats = MinMaxStats()
@@ -88,8 +91,7 @@ class MCTS():
             parent = self.node_trajectory[-2]
             v = self.expand(parent, node, self.action_trajectory[-1])
             
-            self.backup(v)
-            
+            self.backup(v)   
             
         return self.get_pi(), self.root.search_value()
      
@@ -103,6 +105,7 @@ class MCTS():
         
         for i in range(self.num_actions):
             node.edges[i] = MCTS_Node(p[0,i])
+            #node.edges[i] = MCTS_Node(0.5)
 
         return v
     
@@ -113,7 +116,8 @@ class MCTS():
             node.value_sum += value
             node.visits += 1
             
-            self.min_max_stats.update(node.search_value())
+            #self.min_max_stats.update(node.search_value())
+            self.min_max_stats.update( node.reward + self.gamma * node.search_value())
             
             value = node.reward + self.gamma * value         
             
@@ -124,40 +128,54 @@ class MCTS():
         for i in range(self.num_actions):
             ucb_scores.append(self.ucb_score(node,node.edges[i]))
             
-        amax = np.amax(ucb_scores)
-        actions = []
-        for i in range(len(ucb_scores)):
-            if amax == ucb_scores[i]:
-                actions.append(i)
+        #amax = np.amax(ucb_scores)
+        #actions = []
+        #for i in range(len(ucb_scores)):
+            #if amax == ucb_scores[i]:
+                #actions.append(i)
         
-        action = np.array(np.random.choice(actions, 1), dtype=np.int64)[0]
+        #action = np.array(np.random.choice(actions, 1), dtype=np.int64)[0]
+        
+        action = np.argmax(ucb_scores)    
         return action, node.edges[action] 
-        #return np.argmax(ucb_scores)
         
     def ucb_score(self, parent, child):
         
         pb_c = math.log((parent.visits + self.c2 + 1) / self.c2) + self.c1
         pb_c *= math.sqrt(parent.visits) / (child.visits + 1)
-
-        prior_score = pb_c * child.p
+        
+        prior_score = pb_c * child.p if pb_c != 0 else child.p
+        
+        value_score = 0
         if child.visits > 0:
-            value_score = child.reward + self.gamma * self.min_max_stats.normalize(child.search_value())
-        else:
-            value_score = 0
+            #value_score = child.reward + self.gamma * self.min_max_stats.normalize(child.search_value())
+            value_score = self.min_max_stats.normalize( child.reward + self.gamma * child.search_value())
             
         #print(f'p:{prior_score} - v:{value_score}')
+        #print(f'{prior_score}+{value_score}')
         return prior_score + value_score
 
             
     def get_pi(self):
         
-        # get action probabilites
+        # get action probabilites with temperature
         edge_visits = []
         for i in range(self.num_actions):
             edge_visits.append(self.root.edges[i].visits)
-            
-        return np.array(edge_visits) / self.root.visits
+        edge_visits = np.array(edge_visits)
+        old_pi = edge_visits / sum(edge_visits)
         
+        pi = (edge_visits ** (1/self.temperature)) / np.sum( edge_visits ** (1/self.temperature))
+        #print("PI:",pi, " Old pi:",old_pi)
+        return pi
+    
+    def add_exploration_noise(self, node):
+        noise = np.random.dirichlet([self.root_dirichlet_alpha] * self.num_actions)
+        frac = self.root_exploration_fraction
+        for a, n in zip(range(self.num_actions), noise):
+            node.edges[a].p = node.edges[a].p * (1 - frac) + n * frac
+        return node
+    
     def init_root(self, state, p):
         p = p.detach().cpu().numpy()
         
@@ -167,5 +185,9 @@ class MCTS():
         
         for i in range(self.num_actions):
             node.edges[i] = MCTS_Node(p[0,i])
+            #node.edges[i] = MCTS_Node(0.5)
     
+        node = self.add_exploration_noise(node)
         return node
+        
+    
