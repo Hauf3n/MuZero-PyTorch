@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
-import time
 
 device = torch.device("cuda:0")
 dtype = torch.float
@@ -35,7 +34,7 @@ class Env_Runner:
         self.ob = self.env.reset()
         self.total_eps = 0
         
-    def run(self, agent, render=False):
+    def run(self, agent):
         
         self.obs = []
         self.actions = []
@@ -64,9 +63,7 @@ class Env_Runner:
                     self.logger.log(f'{self.total_eps},{info["return"]}')
                     print("Return:",info["return"])
             
-            if render:
-                self.env.render()
-                time.sleep(0.024)
+            #self.env.render()
         
         self.total_eps += 1
                                     

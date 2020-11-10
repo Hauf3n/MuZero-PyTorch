@@ -60,6 +60,7 @@ class Experience_Replay():
             # add discounted rewards until step n or end of episode
             last_valid_index = np.minimum(traj_last_index, n_index)
             for i, reward in enumerate(self.memory[memory_index]["rewards"][step:last_valid_index]):
+            #for i, reward in enumerate(self.memory[memory_index]["rewards"][step::]): # rewards until end of episode
                 value += reward * (gamma ** i)
                 
             sample["return"].append(value)
@@ -87,7 +88,7 @@ class Experience_Replay():
         
         return sample
         
-    def get(self, batch_size, k, n, gamma=0.99):
+    def get(self, batch_size, k, n, gamma=0.95):
         
         data = []
         

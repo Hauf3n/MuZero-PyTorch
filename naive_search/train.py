@@ -22,15 +22,15 @@ def train():
     
     history_length = 3
     num_hidden = 50
-    replay_capacity = 100
+    replay_capacity = 30
     batch_size = 32
     k = 3
-    n = 10
-    lr = 2.5e-3
+    n = 3
+    lr = 5e-3
     
     start_eps = 1
     final_eps = 0.1
-    final_episode = 1000
+    final_episode = 400
     eps_interval = start_eps-final_eps
     
     raw_env = gym.make('CartPole-v0')
@@ -53,7 +53,7 @@ def train():
     
     optimizer = optim.Adam(agent.parameters(), lr=lr)
  
-    for episode in range(1500):#while True:
+    for episode in range(2000):#while True:
         
         agent.eps = np.maximum(final_eps, start_eps - ( eps_interval * episode/final_episode))
         
@@ -67,7 +67,7 @@ def train():
         # do update #
         #############
         
-        if len(replay) < 10:
+        if len(replay) < 15:
             continue
             
         for update in range(8):
@@ -106,13 +106,10 @@ def train():
                 reward_loss = mse_loss(rewards, rewards_target[:,step-1].detach())
                 
                 #print(f'value: {value_loss} || reward: {reward_loss}')
-                loss += (value_loss + reward_loss)
+                loss += (value_loss + reward_loss)/k+1
                 
             loss.backward()
-            optimizer.step()
-            
-            if (episode+1)%10 == 0:
-                torch.save(agent,f"{episode}.pt")
+            optimizer.step() 
 
 if __name__ == "__main__":
 
