@@ -8,6 +8,10 @@ import torch.nn.functional as F
 device = torch.device("cuda:0")
 dtype = torch.float
 
+def softmax(x):
+  e_x = np.exp(x - np.max(x))
+  return e_x / e_x.sum()
+
 class MinMaxStats():
     
     def __init__(self):
@@ -50,12 +54,12 @@ class MCTS_Node():
 
 class MCTS():
     
-    def __init__(self, num_actions, dynamics_model, prediction_model, agent, c1=1.25, c2=19652, gamma=0.99):
+    def __init__(self, num_actions, dynamics_model, prediction_model, agent, gamma=0.99):
         super().__init__()
         
         self.num_actions = num_actions
-        self.c1 = c1
-        self.c2 = c2
+        self.c1 = 1.25
+        self.c2 = 19652
         self.gamma = gamma
         self.root_dirichlet_alpha = 0.25
         self.root_exploration_fraction = 0.25
@@ -105,7 +109,6 @@ class MCTS():
         
         for i in range(self.num_actions):
             node.edges[i] = MCTS_Node(p[0,i])
-            #node.edges[i] = MCTS_Node(0.5)
 
         return v
     
@@ -116,7 +119,6 @@ class MCTS():
             node.value_sum += value
             node.visits += 1
             
-            #self.min_max_stats.update(node.search_value())
             self.min_max_stats.update( node.reward + self.gamma * node.search_value())
             
             value = node.reward + self.gamma * value         
@@ -128,15 +130,15 @@ class MCTS():
         for i in range(self.num_actions):
             ucb_scores.append(self.ucb_score(node,node.edges[i]))
             
-        #amax = np.amax(ucb_scores)
-        #actions = []
-        #for i in range(len(ucb_scores)):
-            #if amax == ucb_scores[i]:
-                #actions.append(i)
+        amax = np.amax(ucb_scores)
+        actions = []
+        for i in range(len(ucb_scores)):
+            if amax == ucb_scores[i]:
+                actions.append(i)
         
-        #action = np.array(np.random.choice(actions, 1), dtype=np.int64)[0]
+        action = np.array(np.random.choice(actions, 1), dtype=np.int64)[0]
         
-        action = np.argmax(ucb_scores)    
+        #action = np.argmax(ucb_scores)    
         return action, node.edges[action] 
         
     def ucb_score(self, parent, child):
@@ -144,29 +146,25 @@ class MCTS():
         pb_c = math.log((parent.visits + self.c2 + 1) / self.c2) + self.c1
         pb_c *= math.sqrt(parent.visits) / (child.visits + 1)
         
-        prior_score = pb_c * child.p if pb_c != 0 else child.p
+        prior_score = pb_c * child.p
         
         value_score = 0
-        if child.visits > 0:
-            #value_score = child.reward + self.gamma * self.min_max_stats.normalize(child.search_value())
+        if child.visits > 0: # and parent.visits > 2:
             value_score = self.min_max_stats.normalize( child.reward + self.gamma * child.search_value())
             
-        #print(f'p:{prior_score} - v:{value_score}')
-        #print(f'{prior_score}+{value_score}')
         return prior_score + value_score
 
             
     def get_pi(self):
         
-        # get action probabilites with temperature
         edge_visits = []
         for i in range(self.num_actions):
             edge_visits.append(self.root.edges[i].visits)
         edge_visits = np.array(edge_visits)
-        old_pi = edge_visits / sum(edge_visits)
         
         pi = (edge_visits ** (1/self.temperature)) / np.sum( edge_visits ** (1/self.temperature))
-        #print("PI:",pi, " Old pi:",old_pi)
+        #pi = softmax(edge_visits)
+        
         return pi
     
     def add_exploration_noise(self, node):
@@ -185,7 +183,6 @@ class MCTS():
         
         for i in range(self.num_actions):
             node.edges[i] = MCTS_Node(p[0,i])
-            #node.edges[i] = MCTS_Node(0.5)
     
         node = self.add_exploration_noise(node)
         return node

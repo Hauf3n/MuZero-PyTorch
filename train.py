@@ -22,22 +22,19 @@ def train():
     
     history_length = 3
     num_hidden = 50
-    num_simulations = 8
+    num_simulations = 16
     replay_capacity = 100
     batch_size = 32
-    k = 4
-    n = 6
+    k = 3
+    n = 10
     lr = 1e-4
     value_coef = 1
     reward_coef = 1
     
-    #target_update = 15
-    
-    #raw_env = gym.make('LunarLander-v2')
     raw_env = gym.make('CartPole-v0')
     num_obs_space = raw_env.observation_space.shape[0]
     num_actions = raw_env.action_space.n
-    num_in = history_length * num_obs_space # history * (obs)
+    num_in = history_length * num_obs_space
     
     env = Env_Wrapper(raw_env, history_length)
     
@@ -46,8 +43,6 @@ def train():
     prediction_model = Prediction_Model(num_hidden, num_actions).to(device)
     
     agent = MuZero_Agent(num_simulations, num_actions, representation_model, dynamics_model, prediction_model).to(device)
-    #target_agent = MuZero_Agent(num_simulations, num_actions, representation_model, dynamics_model, prediction_model).to(device)
-    #target_agent.load_state_dict(agent.state_dict())
 
     runner = Env_Runner(env)
     replay = Experience_Replay(replay_capacity, num_actions)
@@ -68,14 +63,19 @@ def train():
         #############
         # do update #
         #############
-        
-        #if episode%target_update == 0:
-            #target_agent.load_state_dict(agent.state_dict()) 
-        
-        if len(replay) < 30:
+             
+        if len(replay) < 15:
             continue
             
-        for i in range(4):
+        if episode < 500:
+           agent.mcts.temperature = 1
+        elif episode < 800:
+            agent.mcts.temperature = 0.75
+        else:
+            agent.mcts.temperature = 0.5
+        
+            
+        for i in range(6):
             optimizer.zero_grad()
             
             # get data
@@ -99,36 +99,37 @@ def train():
             
             state, p, v = agent.inital_step(representation_in)
             
-            policy_loss = mse_loss(p, policy_target[:,0].detach())
-            #policy_loss = torch.mean(torch.sum(- policy_target[:,0].detach() * logsoftmax(p), 1))
+            #policy mse
+            #policy_loss = mse_loss(p, policy_target[:,0].detach())
+            
+            #policy cross entropy
+            policy_loss = torch.mean(torch.sum(- policy_target[:,0].detach() * logsoftmax(p), 1))
             
             value_loss = mse_loss(v, value_target[:,0].detach())
             
             loss += policy_loss + value_coef * value_loss
-            #loss += value_loss
 
             # steps
             for step in range(1, k+1):
             
-                # step
                 step_action = actions[:,step - 1]
                 state, p, v, rewards = agent.rollout_step(state, step_action)
                 
-                policy_loss = mse_loss(p, policy_target[:,step].detach())
-                #policy_loss = torch.mean(torch.sum(- policy_target[:,step].detach() * logsoftmax(p), 1))
+                #policy mse
+                #policy_loss = mse_loss(p, policy_target[:,step].detach())
+                
+                #policy cross entropy
+                policy_loss = torch.mean(torch.sum(- policy_target[:,step].detach() * logsoftmax(p), 1))
                 
                 value_loss = mse_loss(v, value_target[:,step].detach())
                 reward_loss = mse_loss(rewards, rewards_target[:,step-1].detach())
                 
-                print(f'policy: {policy_loss} || value: {value_loss} || reward: {reward_loss}')
-                #print(f'value: {value_loss} || reward: {reward_loss}')
-                loss += (policy_loss + value_coef * value_loss + reward_coef * reward_loss) / (step + 1)
-                #loss += (value_loss + reward_loss) / (k+1)
+                #print(f'policy: {policy_loss} || value: {value_loss} || reward: {reward_loss}')
+                loss += (policy_loss + value_coef * value_loss + reward_coef * reward_loss) / (k+1)
          
             loss.backward()
             optimizer.step() 
         
-        # clear replay, no reanalyse
         #replay = Experience_Replay(replay_capacity, num_actions)
 
 if __name__ == "__main__":

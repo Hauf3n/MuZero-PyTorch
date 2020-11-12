@@ -10,6 +10,10 @@ from naive_search import naive_search
 device = torch.device("cuda:0")
 dtype = torch.float
 
+def softmax(x):
+  e_x = np.exp(x - np.max(x))
+  return e_x / e_x.sum()
+
 class MuZero_Agent(nn.Module):
     
     def __init__(self, num_simulations, num_actions, representation_model, dynamics_model, prediction_model):
@@ -32,10 +36,11 @@ class MuZero_Agent(nn.Module):
         start_state = self.representation_model(obs)
         pi, v = self.mcts.run(self.num_simulations, start_state)
         
-        action = np.random.choice(self.num_actions, 1, p=pi)
-        #action = np.random.choice(self.num_actions, 1)
-        #return 0, pi, v
+        action = np.random.choice(self.num_actions, 1, p=softmax(pi))
+        #action = np.random.choice(self.num_actions, 1, p=pi)
+
         print(pi)
+        print(v)
         return action[0], pi, v
   
     def inital_step(self, obs):
