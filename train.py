@@ -20,15 +20,15 @@ dtype = torch.float
 
 def train():
     
-    history_length = 3
+    history_length = 2
     num_hidden = 50
     num_simulations = 16
     replay_capacity = 100
     batch_size = 32
     k = 3
-    n = 10
-    lr = 1e-4
-    value_coef = 1
+    n = 5
+    lr = 1e-3
+    value_coef = 0.01
     reward_coef = 1
     
     raw_env = gym.make('CartPole-v0')
@@ -100,10 +100,10 @@ def train():
             state, p, v = agent.inital_step(representation_in)
             
             #policy mse
-            #policy_loss = mse_loss(p, policy_target[:,0].detach())
+            policy_loss = mse_loss(p, policy_target[:,0].detach())
             
             #policy cross entropy
-            policy_loss = torch.mean(torch.sum(- policy_target[:,0].detach() * logsoftmax(p), 1))
+            #policy_loss = torch.mean(torch.sum(- policy_target[:,0].detach() * logsoftmax(p), 1))
             
             value_loss = mse_loss(v, value_target[:,0].detach())
             
@@ -116,10 +116,10 @@ def train():
                 state, p, v, rewards = agent.rollout_step(state, step_action)
                 
                 #policy mse
-                #policy_loss = mse_loss(p, policy_target[:,step].detach())
+                policy_loss = mse_loss(p, policy_target[:,step].detach())
                 
                 #policy cross entropy
-                policy_loss = torch.mean(torch.sum(- policy_target[:,step].detach() * logsoftmax(p), 1))
+                #policy_loss = torch.mean(torch.sum(- policy_target[:,step].detach() * logsoftmax(p), 1))
                 
                 value_loss = mse_loss(v, value_target[:,step].detach())
                 reward_loss = mse_loss(rewards, rewards_target[:,step-1].detach())

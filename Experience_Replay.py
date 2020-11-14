@@ -78,10 +78,10 @@ class Experience_Replay():
                 sample["pi"].append(self.memory[memory_index]["pis"][step])
             else:
                 #use when mse loss
-                #sample["pi"].append(torch.tensor(np.repeat(1,self.num_actions)/self.num_actions))
+                sample["pi"].append(torch.tensor(np.repeat(1,self.num_actions)/self.num_actions))
                 
                 #use when cross entropy loss
-                sample["pi"].append(torch.tensor(np.repeat(1,self.num_actions)*0.0))
+                #sample["pi"].append(torch.tensor(np.repeat(1,self.num_actions)*0.0))
 
         # unroll steps beyond trajectory then fill in the remaining (random) actions
         

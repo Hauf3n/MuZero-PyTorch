@@ -130,15 +130,7 @@ class MCTS():
         for i in range(self.num_actions):
             ucb_scores.append(self.ucb_score(node,node.edges[i]))
             
-        amax = np.amax(ucb_scores)
-        actions = []
-        for i in range(len(ucb_scores)):
-            if amax == ucb_scores[i]:
-                actions.append(i)
-        
-        action = np.array(np.random.choice(actions, 1), dtype=np.int64)[0]
-        
-        #action = np.argmax(ucb_scores)    
+        action = np.argmax(ucb_scores)    
         return action, node.edges[action] 
         
     def ucb_score(self, parent, child):
