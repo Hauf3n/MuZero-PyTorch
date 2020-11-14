@@ -1,9 +1,11 @@
 # MuZero PyTorch
- Implementation of MuZero | CartPole <br><br>
+ Implementation of [Mastering Atari, Go, Chess and Shogi by Planning with a Learned Model](https://arxiv.org/pdf/1911.08265.pdf) by DeepMind for CartPole-v0 <br><br>
  
- MuZero + naive-tree-search (instead of MCTS) is working.<br>
- Work in progress ...<br><br>
- Current issue:<br> MCTS problems. Value and reward prediction seem to work because of decreasing search values at the end of episodes. <br>
+ MuZero + naive tree search is working.<br>
+ MuZero + monte carlo tree search (MCTS) is working, but unstable at the moment.<br>
+ 
+ Work in progress ...<br>
+ Current issue: MCTS stability. <br>
  
  # Naive tree search results
  Search in the fully expanded tree at depth n the maximum discounted value (+ discounted rewards).<br>
