@@ -11,7 +11,7 @@ device = torch.device("cuda:0")
 dtype = torch.float
 
 def softmax(x):
-  e_x = np.exp(x - np.max(x))
+  e_x = np.exp(x)
   return e_x / e_x.sum()
 
 class MuZero_Agent(nn.Module):
@@ -34,14 +34,15 @@ class MuZero_Agent(nn.Module):
     def mcts_inference(self, obs): # inference with MCTS
     
         start_state = self.representation_model(obs)
-        pi, v = self.mcts.run(self.num_simulations, start_state)
+        child_visits, v = self.mcts.run(self.num_simulations, start_state)
         
-        action = np.random.choice(self.num_actions, 1, p=softmax(pi))
-        #action = np.random.choice(self.num_actions, 1, p=pi)
-
-        print(pi)
+        action = np.random.choice(self.num_actions, 1, p=softmax(child_visits))
+        
+        search_policy = child_visits/np.sum(child_visits)
+        
+        print(child_visits)
         print(v)
-        return action[0], pi, v
+        return action[0], search_policy, v
   
     def inital_step(self, obs):
     # first step of rollout for optimization

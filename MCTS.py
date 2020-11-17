@@ -8,10 +8,6 @@ import torch.nn.functional as F
 device = torch.device("cuda:0")
 dtype = torch.float
 
-def softmax(x):
-  e_x = np.exp(x - np.max(x))
-  return e_x / e_x.sum()
-
 class MinMaxStats():
     
     def __init__(self):
@@ -154,10 +150,10 @@ class MCTS():
             edge_visits.append(self.root.edges[i].visits)
         edge_visits = np.array(edge_visits)
         
-        pi = (edge_visits ** (1/self.temperature)) / np.sum( edge_visits ** (1/self.temperature))
+        return edge_visits
+        #pi = (edge_visits ** (1/self.temperature)) / np.sum( edge_visits ** (1/self.temperature))
         #pi = softmax(edge_visits)
-        
-        return pi
+        #return pi
     
     def add_exploration_noise(self, node):
         noise = np.random.dirichlet([self.root_dirichlet_alpha] * self.num_actions)

@@ -20,15 +20,15 @@ dtype = torch.float
 
 def train():
     
-    history_length = 2
+    history_length = 4
     num_hidden = 50
     num_simulations = 16
     replay_capacity = 100
     batch_size = 32
-    k = 3
-    n = 5
+    k = 5
+    n = 10
     lr = 1e-3
-    value_coef = 0.01
+    value_coef = 0.01#1#0.01
     reward_coef = 1
     
     raw_env = gym.make('CartPole-v0')
