@@ -5,7 +5,11 @@
  MuZero + monte carlo tree search (MCTS) is working.<br>
  
  Work in progress ...<br>
- Improvements: add more functionality for MCTS Agent. <br>
+ Improvements: more functionality for MCTS Agent. <br>
+ 
+ # MCTS results
+ 
+ ![training_mcts](https://github.com/Hauf3n/MuZero-PyTorch/blob/master/media/training_mcts.png)
  
  # Naive tree search results
  Search in the fully expanded tree at depth n the maximum discounted value (+ discounted rewards).<br>
@@ -13,8 +17,3 @@
  
  ![cartpole_naive_tree_search](https://github.com/Hauf3n/MuZero-PyTorch/blob/master/media/cartpole_naive_tree_search.gif)
  ![training_naive_tree_search](https://github.com/Hauf3n/MuZero-PyTorch/blob/master/media/training_naive_tree_search.png)
- 
- 
- 
-
- 
