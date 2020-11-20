@@ -5,7 +5,7 @@
  MuZero + monte carlo tree search (MCTS) is now working.<br>
  
  Work in progress ...<br>
- Improvements: more functionality for MCTS Agent. <br>
+ Improvements: more tricks/hacks for better MCTS training. <br>
  
  # MCTS results
  
