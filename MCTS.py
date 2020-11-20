@@ -59,7 +59,6 @@ class MCTS():
         self.gamma = gamma
         self.root_dirichlet_alpha = 0.25
         self.root_exploration_fraction = 0.25
-        self.temperature = 1
         
         self.dynamics_model = dynamics_model
         self.prediction_model = prediction_model

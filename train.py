@@ -20,15 +20,15 @@ dtype = torch.float
 
 def train():
     
-    history_length = 4
+    history_length = 3
     num_hidden = 50
-    num_simulations = 16
+    num_simulations = 20
     replay_capacity = 100
     batch_size = 32
     k = 5
     n = 10
     lr = 1e-3
-    value_coef = 0.01#1#0.01
+    value_coef = 1#0.01#1
     reward_coef = 1
     
     raw_env = gym.make('CartPole-v0')
@@ -67,15 +67,21 @@ def train():
         if len(replay) < 15:
             continue
             
-        if episode < 500:
-           agent.mcts.temperature = 1
-        elif episode < 800:
-            agent.mcts.temperature = 0.75
+        if episode < 250:
+           agent.temperature = 1
+        elif episode < 300:
+            agent.temperature = 0.75
+        elif episode < 400:
+            agent.temperature = 0.65
+        elif episode < 500:
+            agent.temperature = 0.55
+        elif episode < 600:
+            agent.temperature = 0.3
         else:
-            agent.mcts.temperature = 0.5
+            agent.temperature = 0.25
         
             
-        for i in range(6):
+        for i in range(16):
             optimizer.zero_grad()
             
             # get data
@@ -91,12 +97,9 @@ def train():
             value_target = torch.stack([torch.tensor(data[i]["return"]) for i in range(batch_size)]).to(device).to(dtype)
             
             # loss
-            #print("--------------------------------------")
-            
             loss = torch.tensor(0).to(device).to(dtype)
             
             # agent inital step
-            
             state, p, v = agent.inital_step(representation_in)
             
             #policy mse
@@ -107,7 +110,7 @@ def train():
             
             value_loss = mse_loss(v, value_target[:,0].detach())
             
-            loss += policy_loss + value_coef * value_loss
+            loss += ( policy_loss + value_coef * value_loss) / 2
 
             # steps
             for step in range(1, k+1):
@@ -124,13 +127,10 @@ def train():
                 value_loss = mse_loss(v, value_target[:,step].detach())
                 reward_loss = mse_loss(rewards, rewards_target[:,step-1].detach())
                 
-                #print(f'policy: {policy_loss} || value: {value_loss} || reward: {reward_loss}')
-                loss += (policy_loss + value_coef * value_loss + reward_coef * reward_loss) / (k+1)
+                loss += ( policy_loss + value_coef * value_loss + reward_coef * reward_loss) / k
          
             loss.backward()
             optimizer.step() 
-        
-        #replay = Experience_Replay(replay_capacity, num_actions)
 
 if __name__ == "__main__":
 

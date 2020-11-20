@@ -10,9 +10,16 @@ from naive_search import naive_search
 device = torch.device("cuda:0")
 dtype = torch.float
 
-def softmax(x):
-  e_x = np.exp(x)
-  return e_x / e_x.sum()
+def bound_state(state): # bound activations to interval [0,1]
+    # probably only works when value and reward prediction are softmax over defined support ...
+    
+    batch_size = state.shape[0]
+    
+    min = torch.min(state, dim=1)[0].reshape(batch_size,1)
+    max = torch.max(state, dim=1)[0].reshape(batch_size,1)
+    state = (state - min) / (max - min)
+    
+    return state
 
 class MuZero_Agent(nn.Module):
     
@@ -27,6 +34,7 @@ class MuZero_Agent(nn.Module):
         self.num_simulations = num_simulations
         
         self.mcts = MCTS(num_actions, dynamics_model, prediction_model, self)
+        self.temperature = 1
         
     def forward(self, obs):
         pass
@@ -36,11 +44,12 @@ class MuZero_Agent(nn.Module):
         start_state = self.representation_model(obs)
         child_visits, v = self.mcts.run(self.num_simulations, start_state)
         
-        action = np.random.choice(self.num_actions, 1, p=softmax(child_visits))
-        
         search_policy = child_visits/np.sum(child_visits)
         
-        print(child_visits)
+        act_policy = (child_visits ** (1/self.temperature)) / np.sum(child_visits ** (1/self.temperature))
+        action = np.random.choice(self.num_actions, 1, p=act_policy)
+        
+        print(search_policy)
         print(v)
         return action[0], search_policy, v
   
@@ -48,6 +57,7 @@ class MuZero_Agent(nn.Module):
     # first step of rollout for optimization
     
         state = self.representation_model(obs)
+        
         p, v = self.prediction_model(state)
         
         return state, p, v
@@ -62,6 +72,7 @@ class MuZero_Agent(nn.Module):
         in_dynamics = torch.cat([state,action_encoding],dim=1)
         
         next_state, reward = self.dynamics_model(in_dynamics)
+        
         p, v = self.prediction_model(next_state)
 
         return next_state, p, v, reward
