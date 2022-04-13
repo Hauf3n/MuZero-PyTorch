@@ -1,10 +1,9 @@
 # MuZero PyTorch
  Implementation of [Mastering Atari, Go, Chess and Shogi by Planning with a Learned Model](https://arxiv.org/pdf/1911.08265.pdf) by DeepMind<br> for CartPole-v0 environment.<br><br>
  
- MuZero + naive tree search is working.<br>
- MuZero + monte carlo tree search (MCTS) is now working.<br>
- 
- Improvements: more tricks/hacks for better MCTS training. <br>
+ - MuZero + naive tree search is working.<br>
+ - MuZero + monte carlo tree search (MCTS) is now working.<br> (search policy has to be approx. uniform at the first episode. If not then restart)<br>
+ - Improvements: more tricks/hacks for better MCTS training. <br>
  
  # MCTS results
  
